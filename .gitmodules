@@ -1,0 +1,3 @@
+[submodule "tweetnacl/tweetnacl"]
+	path = tweetnacl/tweetnacl
+	url = git@github.com:dominictarr/tweetnacl.git
