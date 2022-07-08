@@ -9,16 +9,16 @@
 import Foundation
 import MEWwalletCTweetNacl
 
-struct Constants {
-  static let PublicKeyLength = 32
-  static let SecretKeyLength = 32
-  static let BeforeNMLength = 32
+public struct Constants {
+  public static let PublicKeyLength = 32
+  public static let SecretKeyLength = 32
+  public static let BeforeNMLength = 32
   
-  struct SecretBox {
-    static let keyLength = 32
-    static let nonceLength = 24
-    static let zeroLength = 32
-    static let boxZeroLength = 16
+  public struct SecretBox {
+    public static let keyLength = 32
+    public static let nonceLength = 24
+    public static let zeroLength = 32
+    public static let boxZeroLength = 16
   }
 }
 
