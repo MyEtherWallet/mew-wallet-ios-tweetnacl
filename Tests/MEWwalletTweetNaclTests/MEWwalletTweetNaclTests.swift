@@ -32,4 +32,24 @@ final class MEWwalletTweetNaclTests: XCTestCase {
       XCTFail((error as? LocalizedError)?.failureReason ?? error.localizedDescription)
     }
   }
+    
+  func testEncode() throws {
+    let receiverKeys = try TweetNacl.keyPair(fromSecretKey: privateKey)
+    let senderKeys = try TweetNacl.keyPair(fromSecretKey: Data(base64Encoded: "nyMPxac0pSgl701/vZQXfHixdHANszQfkQ/KEH+ypd4=")) // TODO:
+    let message = "My name is Satoshi Buterin"
+    let nonceData = Data(base64Encoded: self.nonce)!
+    XCTAssertEqual(String(data: senderKeys.publicKey.base64EncodedData(), encoding: .utf8), "1QJONc+lFtQQk7X392dWv0In1jlTNvWMZVUivjdVmWI=")
+      
+    // encrypt
+    let secretbox = try TweetNacl.box(message: message, nonce: nonceData, theirPublicKey: receiverKeys.publicKey, mySecretKey: senderKeys.secretKey)
+    
+    // decrypt
+    let decrypted = try TweetNacl.open(message: secretbox, nonce: nonceData, publicKey: senderKeys.publicKey, secretKey: receiverKeys.secretKey)
+    guard let decryptedMessage = String(data: decrypted, encoding: .utf8) else {
+      XCTFail("Can't create a string")
+      return
+    }
+    
+    XCTAssertEqual(decryptedMessage, message)
+  }
 }

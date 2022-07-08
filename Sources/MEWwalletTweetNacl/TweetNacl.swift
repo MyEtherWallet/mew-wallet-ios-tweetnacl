@@ -65,18 +65,27 @@ public enum TweetNaclError: LocalizedError {
 }
 
 public class TweetNacl {
-  public static func keyPair(fromSecretKey sk: Data) throws -> (publicKey: Data, secretKey: Data) {
-    guard sk.count == Constants.SecretKeyLength else { throw TweetNaclError.invalidSecretKey }
-    
-    var pk = [UInt8](repeating: 0, count: Constants.SecretKeyLength)
-    var sk = [UInt8](sk)
+  public static func keyPair(fromSecretKey: Data? = nil) throws -> (publicKey: Data, secretKey: Data) {
+    var sk: [UInt8]
+    if let fromSecretKey = fromSecretKey {
+      guard fromSecretKey.count == Constants.SecretKeyLength else { throw TweetNaclError.invalidSecretKey }
+      sk = [UInt8](fromSecretKey)
+    } else {
+        sk = [UInt8](repeating: 0, count: Constants.SecretKeyLength)
+        let status = SecRandomCopyBytes(kSecRandomDefault, Constants.SecretKeyLength, &sk)
+        guard status == errSecSuccess else {
+            throw TweetNaclError.tweetNacl("Secure random bytes error")
+        }
+    }
+          
+    var pk = [UInt8](repeating: 0, count: Constants.PublicKeyLength)
     
     let result = crypto_scalarmult_curve25519_tweet_base(&pk, &sk)
     
     guard result == 0 else { throw TweetNaclError.tweetNacl("[TweetNacl.keyPair] Internal error code: \(result)") }
     
     return (Data(pk), Data(sk))
-  }
+  }        
   
   public static func open(message: Data, nonce: Data, publicKey: Data, secretKey: Data) throws -> Data {
     let k = try before(publicKey: publicKey, secretKey: secretKey)
@@ -115,4 +124,27 @@ public class TweetNacl {
     
     return Data(m[Constants.SecretBox.zeroLength..<c.count])
   }
+    
+  public static func box(message: String, nonce: Data, theirPublicKey: Data, mySecretKey: Data) throws -> Data {
+    let k = try before(publicKey: theirPublicKey, secretKey: mySecretKey)
+    guard let data = message.data(using: .utf8) else { throw TweetNaclError.tweetNacl("Invalid message")}
+    return try secretbox(message: data, nonce: nonce, key: k)
+  }
+
+  private static func secretbox(message: Data, nonce: Data, key: Data) throws -> Data {
+    guard key.count == Constants.SecretBox.keyLength else { throw TweetNaclError.invalidKey }
+    guard nonce.count == Constants.SecretBox.nonceLength else { throw TweetNaclError.invalidNonce }
+      
+    var mData = Data(count: message.count + Constants.SecretBox.boxZeroLength)
+    mData.replaceSubrange(Constants.SecretBox.boxZeroLength..<mData.count, with: message)
+    let m = [UInt8](mData)
+    var c = [UInt8](repeating: 0, count: message.count)
+    var nonce = [UInt8](nonce)
+    var key = [UInt8](key)
+      
+    let result = crypto_secretbox_xsalsa20poly1305_tweet(&c, m, UInt64(m.count), &nonce, &key)
+    guard result == 0 else { throw TweetNaclError.tweetNacl("[TweetNacl.secretbox] Internal error code: \(result)") }
+    
+    return Data(c[0..<Constants.SecretBox.zeroLength])
+    }
 }
