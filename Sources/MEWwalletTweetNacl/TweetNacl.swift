@@ -146,14 +146,14 @@ public class TweetNacl {
     guard result == 0 else { throw TweetNaclError.tweetNacl("[TweetNacl.secretbox] Internal error code: \(result)") }
     
     return Data(c[Constants.SecretBox.boxZeroLength..<c.count])
-    }
+  }
     
-    private static func randomNonce() throws -> Data {
-      var nonce = [UInt8](repeating: 0, count: Constants.SecretBox.nonceLength)
-      let status = SecRandomCopyBytes(kSecRandomDefault, Constants.SecretBox.nonceLength, &nonce)
-      guard status == errSecSuccess else {
-        throw TweetNaclError.tweetNacl("Secure random bytes error")
-      }
-        return Data(nonce)
+  private static func randomNonce() throws -> Data {
+    var nonce = [UInt8](repeating: 0, count: Constants.SecretBox.nonceLength)
+    let status = SecRandomCopyBytes(kSecRandomDefault, Constants.SecretBox.nonceLength, &nonce)
+    guard status == errSecSuccess else {
+      throw TweetNaclError.tweetNacl("Secure random bytes error")
     }
+    return Data(nonce)
+  }
 }
