@@ -9,12 +9,12 @@
 import Foundation
 import MEWwalletCTweetNacl
 
-public struct Constants {
+struct Constants {
   public static let PublicKeyLength = 32
   public static let SecretKeyLength = 32
   public static let BeforeNMLength = 32
   
-  public struct SecretBox {
+  struct SecretBox {
     public static let keyLength = 32
     public static let nonceLength = 24
     public static let zeroLength = 32
@@ -124,27 +124,36 @@ public class TweetNacl {
     
     return Data(m[Constants.SecretBox.zeroLength..<c.count])
   }
-    
-  public static func box(message: String, nonce: Data, theirPublicKey: Data, mySecretKey: Data) throws -> Data {
+  
+  public static func box(message: String, theirPublicKey: Data, mySecretKey: Data, nonce: Data? = nil) throws -> Data {
     let k = try before(publicKey: theirPublicKey, secretKey: mySecretKey)
     guard let data = message.data(using: .utf8) else { throw TweetNaclError.tweetNacl("Invalid message")}
-    return try secretbox(message: data, nonce: nonce, key: k)
+    return try secretbox(message: data, nonce: nonce ?? randomNonce(), key: k)
   }
 
   private static func secretbox(message: Data, nonce: Data, key: Data) throws -> Data {
     guard key.count == Constants.SecretBox.keyLength else { throw TweetNaclError.invalidKey }
     guard nonce.count == Constants.SecretBox.nonceLength else { throw TweetNaclError.invalidNonce }
       
-    var mData = Data(count: message.count + Constants.SecretBox.boxZeroLength)
+    var mData = Data(count: message.count + Constants.SecretBox.zeroLength)
     mData.replaceSubrange(Constants.SecretBox.boxZeroLength..<mData.count, with: message)
     let m = [UInt8](mData)
-    var c = [UInt8](repeating: 0, count: message.count)
+    var c = [UInt8](repeating: 0, count: mData.count)
     var nonce = [UInt8](nonce)
     var key = [UInt8](key)
       
     let result = crypto_secretbox_xsalsa20poly1305_tweet(&c, m, UInt64(m.count), &nonce, &key)
     guard result == 0 else { throw TweetNaclError.tweetNacl("[TweetNacl.secretbox] Internal error code: \(result)") }
     
-    return Data(c[0..<Constants.SecretBox.zeroLength])
+    return Data(c[Constants.SecretBox.boxZeroLength..<c.count])
+    }
+    
+    private static func randomNonce() throws -> Data {
+      var nonce = [UInt8](repeating: 0, count: Constants.SecretBox.nonceLength)
+      let status = SecRandomCopyBytes(kSecRandomDefault, Constants.SecretBox.nonceLength, &nonce)
+      guard status == errSecSuccess else {
+        throw TweetNaclError.tweetNacl("Secure random bytes error")
+      }
+        return Data(nonce)
     }
 }

@@ -41,7 +41,7 @@ final class MEWwalletTweetNaclTests: XCTestCase {
     XCTAssertEqual(String(data: senderKeys.publicKey.base64EncodedData(), encoding: .utf8), "1QJONc+lFtQQk7X392dWv0In1jlTNvWMZVUivjdVmWI=")
       
     // encrypt
-    let secretbox = try TweetNacl.box(message: message, nonce: nonceData, theirPublicKey: receiverKeys.publicKey, mySecretKey: senderKeys.secretKey)
+    let secretbox = try TweetNacl.box(message: message, theirPublicKey: receiverKeys.publicKey, mySecretKey: senderKeys.secretKey, nonce: nonceData)
     
     // decrypt
     let decrypted = try TweetNacl.open(message: secretbox, nonce: nonceData, publicKey: senderKeys.publicKey, secretKey: receiverKeys.secretKey)
