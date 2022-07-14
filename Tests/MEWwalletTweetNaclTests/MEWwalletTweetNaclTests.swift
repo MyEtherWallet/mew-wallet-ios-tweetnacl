@@ -45,7 +45,7 @@ final class MEWwalletTweetNaclTests: XCTestCase {
   func testEncode() throws {
     let receiverKeys = try TweetNacl.keyPair(fromSecretKey: privateKey)
 //    let ephemPublicKeyData = Data(base64Encoded: self.ephemPublicKey)!
-      let ephemKeys = try TweetNacl.keyPair()
+    let ephemKeys = try TweetNacl.keyPair()
     let message = "My name is Satoshi Buterin".data(using: .utf8)!
     let nonceData = Data(base64Encoded: self.nonce)!
     
@@ -55,15 +55,45 @@ final class MEWwalletTweetNaclTests: XCTestCase {
       
     // encrypt
 //    let secretbox = try TweetNacl.box(message: message, recipientPublicKey: receiverKeys.publicKey, senderSecretKey: ephemPublicKeyData, nonce: nonceData)
-      let secretbox = try TweetNacl.box(message: message, recipientPublicKey: receiverKeys.publicKey, senderSecretKey: ephemKeys.secretKey, nonce: nonceData)
-    let secretboxString = String(data: secretbox.base64EncodedData(), encoding: .utf8)!
+    let secretbox = try TweetNacl.box(message: message, recipientPublicKey: receiverKeys.publicKey, senderSecretKey: ephemKeys.secretKey, nonce: nonceData)
+    let secretboxString = String(data: secretbox.box.base64EncodedData(), encoding: .utf8)!
     let expectedCiphertext = "f8kBcl/NCyf3sybfbwAKk/np2Bzt9lRVkZejr6uh5FgnNlH/ic62DZzy"
     XCTAssertEqual(secretboxString.count, expectedCiphertext.count)
 //    XCTAssertEqual(secretboxString, expectedCiphertext)
     
     // decrypt
 //    let decrypted = try TweetNacl.open(message: secretbox, nonce: nonceData, publicKey: ephemPublicKeyData, secretKey: receiverKeys.secretKey)
-      let decrypted = try TweetNacl.open(message: secretbox, nonce: nonceData, publicKey: ephemKeys.publicKey, secretKey: receiverKeys.secretKey)
+    let decrypted = try TweetNacl.open(message: secretbox.box, nonce: nonceData, publicKey: ephemKeys.publicKey, secretKey: receiverKeys.secretKey)
+    guard let decryptedMessage = String(data: decrypted, encoding: .utf8) else {
+      XCTFail("Can't create a string")
+      return
+    }
+    XCTAssertEqual(decryptedMessage, String(data: message, encoding: .utf8))
+  }
+    
+  func testEncodeRandom() throws {
+    let message = "My name is Satoshi Buterin".data(using: .utf8)!
+    let receiverKeys = try TweetNacl.keyPair(fromSecretKey: privateKey)
+    let senderKeys = try TweetNacl.keyPair()
+    let encoded = try TweetNacl.box(message: message, recipientPublicKey: receiverKeys.publicKey, senderSecretKey: senderKeys.secretKey)
+        
+    // decrypt
+    let decrypted = try TweetNacl.open(message: encoded.box, nonce: encoded.nonce, publicKey: senderKeys.publicKey, secretKey: receiverKeys.secretKey)
+    guard let decryptedMessage = String(data: decrypted, encoding: .utf8) else {
+      XCTFail("Can't create a string")
+      return
+    }
+    XCTAssertEqual(decryptedMessage, String(data: message, encoding: .utf8))
+  }
+    
+  func testDecodeBySender() throws {
+    let message = "My name is Satoshi Buterin".data(using: .utf8)!
+    let receiverKeys = try TweetNacl.keyPair(fromSecretKey: privateKey)
+    let senderKeys = try TweetNacl.keyPair()
+    let (box, nonce) = try TweetNacl.box(message: message, recipientPublicKey: receiverKeys.publicKey, senderSecretKey: senderKeys.secretKey)
+        
+    // decrypt by sender
+    let decrypted = try TweetNacl.open(message: box, nonce: nonce, publicKey: receiverKeys.publicKey, secretKey: senderKeys.secretKey)
     guard let decryptedMessage = String(data: decrypted, encoding: .utf8) else {
       XCTFail("Can't create a string")
       return

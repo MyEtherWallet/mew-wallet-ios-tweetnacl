@@ -163,9 +163,11 @@ public class TweetNacl {
   ///   - mySecretKey: Sender's private key
   ///   - nonce: nonce (pass nil for random nonce)
   /// - Returns: secret box
-  public static func box(message: Data, recipientPublicKey: Data, senderSecretKey: Data, nonce: Data? = nil) throws -> Data {
+  public static func box(message: Data, recipientPublicKey: Data, senderSecretKey: Data, nonce: Data? = nil) throws -> (box: Data, nonce: Data) {
     let k = try before(publicKey: recipientPublicKey, secretKey: senderSecretKey)
-    return try secretbox(message: message, nonce: nonce ?? randomNonce(), key: k)
+    let nonce = try nonce ?? randomNonce()
+    let box = try secretbox(message: message, nonce: nonce, key: k)
+    return (box: box, nonce: nonce)
   }
     
   /// Encrypts message, creates secretbox
