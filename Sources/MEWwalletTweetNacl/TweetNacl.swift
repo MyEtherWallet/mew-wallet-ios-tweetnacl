@@ -180,7 +180,7 @@ public class TweetNacl {
     guard nonce.count == Constants.SecretBox.nonceLength else { throw TweetNaclError.invalidNonce }
       
     var mData = Data(count: Constants.SecretBox.zeroLength + message.count)
-    mData.replaceSubrange(Constants.SecretBox.boxZeroLength ..< message.count, with: message)
+    mData.replaceSubrange(Constants.SecretBox.zeroLength ..< mData.count, with: message)
     var m = [UInt8](mData)
     var c = [UInt8](repeating: 0, count: m.count)
     var nonce = [UInt8](nonce)
@@ -189,7 +189,7 @@ public class TweetNacl {
     let result = crypto_secretbox_xsalsa20poly1305_tweet(&c, &m, UInt64(m.count), &nonce, &key)
     guard result == 0 else { throw TweetNaclError.tweetNacl("[TweetNacl.secretbox] Internal error code: \(result)") }
     
-      return Data(c[Constants.SecretBox.boxZeroLength..<c.count])
+    return Data(c[Constants.SecretBox.boxZeroLength..<c.count])
   }
     
   private static func randomNonce() throws -> Data {
@@ -201,3 +201,76 @@ public class TweetNacl {
     return Data(nonce)
   }
 }
+
+// Source: https://github.com/dchest/tweetnacl-js
+// https://www.tabnine.com/code/javascript/modules/tweetnacl
+
+/*
+ 
+ 
+ // box
+ 
+ nacl.box = function(msg, nonce, publicKey, secretKey) {
+   var k = nacl.box.before(publicKey, secretKey);
+   return nacl.secretbox(msg, nonce, k);
+ };
+
+ nacl.box.before = function(publicKey, secretKey) {
+   checkArrayTypes(publicKey, secretKey);
+   checkBoxLengths(publicKey, secretKey);
+   var k = new Uint8Array(crypto_box_BEFORENMBYTES);
+   crypto_box_beforenm(k, publicKey, secretKey);
+   return k;
+ };
+
+ nacl.box.after = nacl.secretbox;
+
+ nacl.box.open = function(msg, nonce, publicKey, secretKey) {
+   var k = nacl.box.before(publicKey, secretKey);
+   return nacl.secretbox.open(msg, nonce, k);
+ };
+
+ nacl.box.open.after = nacl.secretbox.open;
+
+ nacl.box.keyPair = function() {
+   var pk = new Uint8Array(crypto_box_PUBLICKEYBYTES);
+   var sk = new Uint8Array(crypto_box_SECRETKEYBYTES);
+   crypto_box_keypair(pk, sk);
+   return {publicKey: pk, secretKey: sk};
+ };
+
+ nacl.box.keyPair.fromSecretKey = function(secretKey) {
+   checkArrayTypes(secretKey);
+   if (secretKey.length !== crypto_box_SECRETKEYBYTES)
+     throw new Error('bad secret key size');
+   var pk = new Uint8Array(crypto_box_PUBLICKEYBYTES);
+   crypto_scalarmult_base(pk, secretKey);
+   return {publicKey: pk, secretKey: new Uint8Array(secretKey)};
+ };
+ 
+ 
+ // Secretbox
+ nacl.secretbox = function(msg, nonce, key) {
+   checkArrayTypes(msg, nonce, key);
+   checkLengths(key, nonce);
+   var m = new Uint8Array(crypto_secretbox_ZEROBYTES + msg.length);
+   var c = new Uint8Array(m.length);
+   for (var i = 0; i < msg.length; i++) m[i+crypto_secretbox_ZEROBYTES] = msg[i];
+   crypto_secretbox(c, m, m.length, nonce, key);
+   return c.subarray(crypto_secretbox_BOXZEROBYTES);
+ };
+
+ nacl.secretbox.open = function(box, nonce, key) {
+   checkArrayTypes(box, nonce, key);
+   checkLengths(key, nonce);
+   var c = new Uint8Array(crypto_secretbox_BOXZEROBYTES + box.length);
+   var m = new Uint8Array(c.length);
+   for (var i = 0; i < box.length; i++) c[i+crypto_secretbox_BOXZEROBYTES] = box[i];
+   if (c.length < 32) return null;
+   if (crypto_secretbox_open(m, c, c.length, nonce, key) !== 0) return null;
+   return m.subarray(crypto_secretbox_ZEROBYTES);
+ };
+
+ 
+ 
+ */
